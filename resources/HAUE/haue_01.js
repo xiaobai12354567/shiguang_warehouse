@@ -235,13 +235,14 @@ const HAUE_TIME_SLOTS = [
     { number: 7, startTime: "15:55", endTime: "16:40" },
     { number: 8, startTime: "16:45", endTime: "17:30" },
     { number: 9, startTime: "19:20", endTime: "20:05" },
-    { number: 10, startTime: "20:10", endTime: "20:55" }
+    { number: 10, startTime: "20:10", endTime: "20:55" },
+    { number: 11, startTime: "21:00", endTime: "21:45" }
 ];
 
 async function runImportFlow() {
     const alertConfirmed = await window.shiguangBridgePromise.showAlert(
         "河南工程学院课表导入（测试版）",
-        "请先登录河南工程学院教务，打开个人课表并选择学期、点击查询。将导入课程和全年固定的第1至10节作息，不区分夏冬。开学日期请在软件内核对设置。",
+        "请先登录河南工程学院教务，打开个人课表并选择学期、点击查询。将导入课程和全年固定的第1至11节作息，不区分夏冬。开学日期请在软件内核对设置。",
         "好的，开始导入"
     );
     if (!alertConfirmed) {
@@ -263,11 +264,15 @@ async function runImportFlow() {
         return;
     }
     const { courses } = result;
-    if (courses.some(course => !Number.isInteger(course.startSection) ||
+    const invalidCourses = courses.filter(course => !Number.isInteger(course.startSection) ||
         !Number.isInteger(course.endSection) || course.startSection < 1 ||
-        course.endSection > 10 || course.endSection < course.startSection)) {
+        course.endSection > HAUE_TIME_SLOTS.length || course.endSection < course.startSection);
+    if (invalidCourses.length > 0) {
+        const details = invalidCourses.slice(0, 5).map(course =>
+            `${course.name || "未命名课程"}：第 ${course.startSection}～${course.endSection} 节`
+        ).join("\n");
         await window.shiguangBridgePromise.showAlert("节次超出已确认作息",
-            "本校已配置第1至10节。课程含其他或无效节次，本次未保存，请联系维护者核对。", "确定");
+            "本校已配置第1至11节。以下课程节次异常，本次未保存，请截图联系维护者核对：\n" + details, "确定");
         return;
     }
 
