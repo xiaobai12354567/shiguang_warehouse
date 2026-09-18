@@ -1,0 +1,8 @@
+adapters:
+  - adapter_id: "XCU_01"
+    adapter_name: "许昌学院"
+    category: "BACHELOR_AND_ASSOCIATE"
+    asset_js_path: "xcu_01.js"
+    import_url: "https://jwglxt.xcu.edu.cn/jwglxt/xtgl/login_slogin.html"
+    maintainer: "拉里"
+    description: "正方教务测试适配，待登录实测。进入个人课表，选择学年学期并查询后导入；使用已确认的第1至12节作息，开学日期请手动核对。"
