@@ -79,7 +79,7 @@ function parserList() {
                 
                 const teacher = $(font[2]).text().replace(regexTeacher, '').trim();
                 
-                if (name && sections && weeks.length && teacher && finalPosition) {
+                if (name && sections && sections.length && weeks.length && teacher && finalPosition) {
                     const startSection = sections[0];
                     const endSection = sections[sections.length - 1];
                     
@@ -113,10 +113,24 @@ function parserInfo(str) {
 /**
  * 解析节次
  */
+// 不依赖宿主页可能改写的 Number.isInteger；统一数字/数字字符串。
+function normalizeSection(value) {
+    if (typeof value !== "number" && typeof value !== "string") return NaN;
+    const text = String(value).trim();
+    if (!/^\d+$/.test(text)) return NaN;
+    const number = +text;
+    return number >= 1 && number <= HAUE_TIME_SLOTS.length ? number : NaN;
+}
+
 function parserSections(str) {
-    const [start, end] = str.split('-').map(Number);
-    if (isNaN(start) || isNaN(end) || start > end) return [];
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    const match = String(str).trim().match(/^(\d+)\s*(?:[-～~—–]\s*(\d+))?\s*节?$/);
+    if (!match) return [];
+    const start = +match[1];
+    const end = +(match[2] || match[1]);
+    if (start < 1 || start > end || end - start > 100) return [];
+    const sections = [];
+    for (let n = start; n <= end; n++) sections.push(n);
+    return sections;
 }
 
 /**
@@ -264,12 +278,20 @@ async function runImportFlow() {
         return;
     }
     const { courses } = result;
-    const invalidCourses = courses.filter(course => !Number.isInteger(course.startSection) ||
-        !Number.isInteger(course.endSection) || course.startSection < 1 ||
-        course.endSection > HAUE_TIME_SLOTS.length || course.endSection < course.startSection);
+    const invalidCourses = [];
+    for (const course of courses) {
+        const start = normalizeSection(course.startSection);
+        const end = normalizeSection(course.endSection);
+        if (start !== start || end !== end || end < start) {
+            invalidCourses.push(course);
+        } else {
+            course.startSection = start;
+            course.endSection = end;
+        }
+    }
     if (invalidCourses.length > 0) {
         const details = invalidCourses.slice(0, 5).map(course =>
-            `${course.name || "未命名课程"}：第 ${course.startSection}～${course.endSection} 节`
+            `${course.name || "未命名课程"}：第 ${String(course.startSection)}～${String(course.endSection)} 节（类型 ${typeof course.startSection}/${typeof course.endSection}）`
         ).join("\n");
         await window.shiguangBridgePromise.showAlert("节次超出已确认作息",
             "本校已配置第1至11节。以下课程节次异常，本次未保存，请截图联系维护者核对：\n" + details, "确定");
